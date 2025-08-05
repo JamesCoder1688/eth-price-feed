@@ -1,10 +1,7 @@
 {
   "name": "eth-price-feed",
   "version": "1.0.0",
-  "type": "module",
-  "description": "定时更新以太坊价格并部署为 JSON 文件",
   "scripts": {
     "update-price": "node scripts/update-eth-price.js"
-  },
-  "dependencies": {}
+  }
 }
