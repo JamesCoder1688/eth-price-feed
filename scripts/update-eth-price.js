@@ -1,9 +1,6 @@
-// scripts/update-eth-price.js
-
 const fs = require("fs");
 const https = require("https");
 
-// 替换成你获取 ETH 数据的 API
 const API_URL = "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd,cny&include_24hr_change=true";
 
 https.get(API_URL, (res) => {
