@@ -1,28 +1,32 @@
-// scripts/update-eth-price.js
-const fs = require('fs');
-const path = require('path');
+name: Update ETH Price
 
-const outputPath = path.join(__dirname, '..', 'eth-price.json');
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # ⏱ 每 5 分钟执行一次
+  workflow_dispatch:        # 手动触发支持
 
-async function fetchEthPrice() {
-  const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd,cny&include_24hr_change=true');
-  const json = await res.json();
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-  const eth = json.ethereum;
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
 
-  const result = {
-    usd: eth.usd,
-    usd_change_24h: parseFloat(eth.usd_24h_change.toFixed(2)),
-    cny: eth.cny,
-    cny_change_24h: parseFloat(eth.cny_24h_change.toFixed(2)),
-    last_updated: new Date().toISOString(),
-  };
+      - name: Install dependencies
+        run: npm install
 
-  fs.writeFileSync(outputPath, JSON.stringify(result, null, 2));
-  console.log('✅ eth-price.json 已更新');
-}
+      - name: Update ETH price JSON
+        run: npm run update-price
 
-fetchEthPrice().catch(err => {
-  console.error('❌ 获取价格失败:', err);
-  process.exit(1);
-});
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add eth-price.json
+          git commit -m "Update eth-price.json" || echo "No changes to commit"
+          git push
