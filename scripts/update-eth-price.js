@@ -1,30 +1,36 @@
 const fs = require("fs");
+const path = require("path");
 const https = require("https");
 
-const API_URL = "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd,cny&include_24hr_change=true";
+function fetchETHPrice() {
+  return new Promise((resolve, reject) => {
+    https.get("https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd,cny&include_24hr_change=true", (res) => {
+      let data = "";
+      res.on("data", (chunk) => (data += chunk));
+      res.on("end", () => {
+        try {
+          const json = JSON.parse(data);
+          const now = new Date();
+          const formatted = now.toISOString().replace("T", " ").slice(0, 19);
+          const priceData = {
+            usd: json.ethereum.usd,
+            usd_change_24h: json.ethereum.usd_24h_change.toFixed(2),
+            cny: json.ethereum.cny,
+            cny_change_24h: json.ethereum.cny_24h_change.toFixed(2),
+            last_updated: formatted + "+08:00",
+          };
 
-https.get(API_URL, (res) => {
-  let data = "";
-
-  res.on("data", (chunk) => {
-    data += chunk;
+          const filePath = path.join(__dirname, "../public/eth-price.json");
+          fs.writeFileSync(filePath, JSON.stringify(priceData, null, 2));
+          resolve("✅ ETH 价格已更新");
+        } catch (err) {
+          reject(err);
+        }
+      });
+    }).on("error", (err) => reject(err));
   });
+}
 
-  res.on("end", () => {
-    const json = JSON.parse(data);
-    const eth = json.ethereum;
-
-    const output = {
-      usd: eth.usd,
-      usd_change_24h: eth.usd_24h_change,
-      cny: eth.cny,
-      cny_change_24h: eth.cny_24h_change,
-      last_updated: new Date().toISOString(),
-    };
-
-    fs.writeFileSync("public/eth-price.json", JSON.stringify(output, null, 2));
-    console.log("✅ ETH 价格已写入 public/eth-price.json");
-  });
-}).on("error", (err) => {
-  console.error("❌ 获取数据失败:", err);
-});
+fetchETHPrice()
+  .then(console.log)
+  .catch(console.error);
