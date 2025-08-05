@@ -1,32 +1,33 @@
-name: Update ETH Price
+// scripts/update-eth-price.js
 
-on:
-  schedule:
-    - cron: '*/5 * * * *'  # ⏱ 每 5 分钟执行一次
-  workflow_dispatch:        # 手动触发支持
+const fs = require("fs");
+const https = require("https");
 
-jobs:
-  update:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+// 替换成你获取 ETH 数据的 API
+const API_URL = "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd,cny&include_24hr_change=true";
 
-      - name: Setup Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
+https.get(API_URL, (res) => {
+  let data = "";
 
-      - name: Install dependencies
-        run: npm install
+  res.on("data", (chunk) => {
+    data += chunk;
+  });
 
-      - name: Update ETH price JSON
-        run: npm run update-price
+  res.on("end", () => {
+    const json = JSON.parse(data);
+    const eth = json.ethereum;
 
-      - name: Commit and push if changed
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add eth-price.json
-          git commit -m "Update eth-price.json" || echo "No changes to commit"
-          git push
+    const output = {
+      usd: eth.usd,
+      usd_change_24h: eth.usd_24h_change,
+      cny: eth.cny,
+      cny_change_24h: eth.cny_24h_change,
+      last_updated: new Date().toISOString(),
+    };
+
+    fs.writeFileSync("public/eth-price.json", JSON.stringify(output, null, 2));
+    console.log("✅ ETH 价格已写入 public/eth-price.json");
+  });
+}).on("error", (err) => {
+  console.error("❌ 获取数据失败:", err);
+});
